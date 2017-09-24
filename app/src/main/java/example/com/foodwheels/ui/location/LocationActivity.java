@@ -27,6 +27,21 @@ public class LocationActivity extends BaseActivity {
     @BindView(R.id.tv_save_address)
     TextView tvSaveAddress;
 
+    @BindView(R.id.tv_save_as)
+    TextView tvSaveAs;
+
+    @BindView(R.id.tv_manual)
+    TextView tvManual;
+
+    @BindView(R.id.tv_home)
+    TextView tvHome;
+
+    @BindView(R.id.tv_work)
+    TextView tvWork;
+
+    @BindView(R.id.tv_other)
+    TextView tvOther;
+
     private BottomSheetBehavior bottomSheetBehaviour;
 
     @Override
@@ -41,6 +56,11 @@ public class LocationActivity extends BaseActivity {
         bottomSheetBehaviour.setState(BottomSheetBehavior.STATE_EXPANDED);
 
         tvSaveAddress.setTypeface(EasyFonts.robotoBlack(this));
+        tvSaveAs.setTypeface(EasyFonts.robotoRegular(this));
+        tvManual.setTypeface(EasyFonts.robotoBlack(this));
+        tvHome.setTypeface(EasyFonts.robotoRegular(this));
+        tvWork.setTypeface(EasyFonts.robotoRegular(this));
+        tvOther.setTypeface(EasyFonts.robotoRegular(this));
 
         bottomSheetBehaviour.setBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override
