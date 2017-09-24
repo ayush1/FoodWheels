@@ -1,8 +1,10 @@
-package example.com.foodwheels;
+package example.com.foodwheels.ui.splash;
 
 import android.os.Bundle;
 
-import example.com.foodwheels.base.BaseActivity;
+import example.com.foodwheels.R;
+import example.com.foodwheels.ui.base.BaseActivity;
+
 
 public class SplashActivity extends BaseActivity {
 

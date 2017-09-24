@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">FoodWheels</string>
+    <string name="save_delivery_location">Save delivery location</string>
+    <string name="address">Address</string>
+    <string name="house_flat_no">House/Flat No.</string>
+    <string name="landmark">Landmark</string>
+    <string name="save_as">SAVE AS</string>
+    <string name="home">Home</string>
+    <string name="work">Work</string>
+    <string name="other">Other</string>
+    <string name="save_and_proceed">SAVE and PROCEED</string>
+    <string name="manual">MANUAL</string>
 </resources>
