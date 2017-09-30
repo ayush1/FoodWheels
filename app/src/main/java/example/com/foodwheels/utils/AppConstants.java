@@ -5,4 +5,7 @@ package example.com.foodwheels.utils;
  */
 
 public class AppConstants {
+
+    public static final int ANIMATION_DURATION = 500;
+
 }

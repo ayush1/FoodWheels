@@ -19,12 +19,7 @@ public class ApplicationModule {
     }
 
     @Provides
-    Context provideContext(){
-        return application;
-    }
-
-    @Provides
-    Application provideApplication(){
+    public Application provideApplication(){
         return application;
     }
 }

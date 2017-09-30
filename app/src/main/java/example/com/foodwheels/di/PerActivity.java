@@ -10,6 +10,6 @@ import javax.inject.Scope;
  */
 
 @Scope
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.CLASS)
 public @interface PerActivity {
 }
