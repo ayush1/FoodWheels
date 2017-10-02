@@ -1,10 +1,12 @@
 package example.com.foodwheels.di.module;
 
 import android.app.Activity;
+import android.content.Context;
 
 import dagger.Module;
 import dagger.Provides;
 import example.com.foodwheels.di.PerActivity;
+import example.com.foodwheels.ui.base.BasePresenter;
 import example.com.foodwheels.ui.location.LocationPresenter;
 
 /**
@@ -30,4 +32,5 @@ public class LocationActivityModule {
     public LocationPresenter provideLocationPresenter(){
         return new LocationPresenter();
     }
+
 }

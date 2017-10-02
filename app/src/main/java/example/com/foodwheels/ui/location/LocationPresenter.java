@@ -8,11 +8,16 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-import example.com.foodwheels.ui.presenter.BasePresenter;
+import example.com.foodwheels.ui.base.BasePresenter;
 
 /**
  * Created by ayushgarg on 28/09/17.
@@ -57,5 +62,30 @@ public class LocationPresenter implements BasePresenter.ProvideLocationPresenter
             }
         };
         thread.start();
+    }
+
+    @Override
+    public GoogleApiClient getApiClient(Context context, GoogleApiClient.ConnectionCallbacks connectionCallbacks,
+                                        GoogleApiClient.OnConnectionFailedListener connectionFailedListener) {
+        return new GoogleApiClient.Builder(context)
+                .addConnectionCallbacks(connectionCallbacks)
+                .addOnConnectionFailedListener(connectionFailedListener)
+                .addApi(LocationServices.API)
+                .build();
+    }
+
+    @Override
+    public LocationRequest getLocationRequest(long locationUpdateInterval) {
+        return new LocationRequest()
+            .setInterval(locationUpdateInterval)
+            .setFastestInterval(locationUpdateInterval/2)
+            .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    }
+
+    @Override
+    public LocationSettingsRequest getLocationSettingRequest(LocationRequest locationRequest) {
+        return new LocationSettingsRequest.Builder()
+                .addLocationRequest(locationRequest)
+                .build();
     }
 }

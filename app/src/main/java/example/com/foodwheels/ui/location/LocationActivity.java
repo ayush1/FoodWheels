@@ -6,6 +6,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
@@ -17,6 +19,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.CycleInterpolator;
+import android.view.animation.Interpolator;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -40,6 +44,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.vstechlab.easyfonts.EasyFonts;
 
@@ -47,11 +52,13 @@ import javax.inject.Inject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 import example.com.foodwheels.R;
 import example.com.foodwheels.di.component.DaggerLocationActivityComponent;
 import example.com.foodwheels.di.component.LocationActivityComponent;
 import example.com.foodwheels.di.module.LocationActivityModule;
 import example.com.foodwheels.ui.base.BaseActivity;
+import example.com.foodwheels.ui.base.BasePresenter;
 import example.com.foodwheels.utils.AppConstants;
 import example.com.foodwheels.utils.ViewUtils;
 
@@ -61,7 +68,7 @@ import example.com.foodwheels.utils.ViewUtils;
 
 public class LocationActivity extends BaseActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, LocationListener,
-        ResultCallback<LocationSettingsResult> {
+        ResultCallback<LocationSettingsResult>, BasePresenter.ProvideLocationViewPresenter {
 
     @BindView(R.id.bottom_sheet)
     View bottomSheet;
@@ -90,6 +97,15 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
     @BindView(R.id.et_address)
     EditText et_address;
 
+    @OnClick(R.id.tv_manual)
+    public void onClick(){
+        if(tvManual.getAlpha() == 1){
+            et_address.setEnabled(true);
+            et_address.setFocusable(true);
+        }
+    }
+
+
     private BottomSheetBehavior bottomSheetBehaviour;
     private boolean isAnimationRunning = false;
     private int EXPAND_VIEW_HEIGHT = 900;
@@ -107,13 +123,13 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
     private Location location;
     private LocationSettingsRequest locationSettingsRequest;
     private LocationRequest locationRequest;
-    private LatLng latLng;
+
+    GoogleApiClient.ConnectionCallbacks connectionCallbacks = this;
+    GoogleApiClient.OnConnectionFailedListener connectionFailedListener = this;
 
     protected static final String TAG = "LocationActivity";
 
     public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
-    public static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
-            UPDATE_INTERVAL_IN_MILLISECONDS / 2;
     private int REQUEST_CHECK_SETTINGS = 1;
     private boolean requestingLocationUpdates;
     private String message;
@@ -173,30 +189,9 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
             }
         });
 
-        buildGoogleApiCient();
-        createLocationRequest();
-        buildLocationSettingsRequest();
-    }
-
-    protected void buildGoogleApiCient() {
-        googleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
-    }
-
-    protected void createLocationRequest() {
-        locationRequest = new LocationRequest();
-        locationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
-        locationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-    }
-
-    protected void buildLocationSettingsRequest() {
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(locationRequest);
-        locationSettingsRequest = builder.build();
+        googleApiClient = locationPresenter.getApiClient(this, connectionCallbacks, connectionFailedListener);
+        locationRequest = locationPresenter.getLocationRequest(UPDATE_INTERVAL_IN_MILLISECONDS);
+        locationSettingsRequest = locationPresenter.getLocationSettingRequest(locationRequest);
     }
 
     @Override
@@ -206,7 +201,10 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) !=
+                        PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, android.Manifest.permission.ACCESS_FINE_LOCATION)) {
                 message = getString(R.string.permission_denied_message);
                 AlertDialog.Builder dialog = new AlertDialog.Builder(this);
@@ -214,7 +212,7 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
-                                checkLocationSettings();
+                                checkLocationSettings(googleApiClient, locationSettingsRequest);
                             }
                         })
                         .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -232,7 +230,7 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
                 location = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
                 updateLocationUI();
             }else{
-                checkLocationSettings();
+                checkLocationSettings(googleApiClient, locationSettingsRequest);
             }
         }
     }
@@ -247,19 +245,20 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
 
     }
 
+    public void checkLocationSettings(GoogleApiClient googleApiClient,
+                                      LocationSettingsRequest settingsRequest) {
+        PendingResult<LocationSettingsResult> result =
+                LocationServices.SettingsApi.checkLocationSettings(googleApiClient, settingsRequest);
+        result.setResultCallback(this);
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case 1:
-                checkLocationSettings();
+                checkLocationSettings(googleApiClient, locationSettingsRequest);
         }
-    }
-
-    protected void checkLocationSettings() {
-        PendingResult<LocationSettingsResult> result =
-                LocationServices.SettingsApi.checkLocationSettings(googleApiClient, locationSettingsRequest);
-        result.setResultCallback(this);
     }
 
     @Override
@@ -267,7 +266,7 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
         final Status status = locationSettingsResult.getStatus();
         switch (status.getStatusCode()) {
             case LocationSettingsStatusCodes.SUCCESS:
-                startProgressiveTimmer();
+                showProgressBar();
                 startLocationUpdates();
                 break;
             case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
@@ -287,7 +286,7 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(resultCode == RESULT_OK && requestCode == REQUEST_CHECK_SETTINGS) {
-            startProgressiveTimmer();
+            showProgressBar();
             startLocationUpdates();
         }
     }
@@ -333,7 +332,8 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
         }
     }
 
-    private void startProgressiveTimmer() {
+    @Override
+    public void showProgressBar() {
         progressBar.setVisibility(View.VISIBLE);
         et_address.setText(R.string.identify_location);
     }
@@ -348,9 +348,6 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
     protected void onStop() {
         super.onStop();
         googleApiClient.disconnect();
-        if (mapRipple.isAnimationRunning()) {
-            mapRipple.stopRippleMapAnimation();
-        }
     }
 
     @Override
@@ -369,7 +366,8 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
         }
     }
 
-    private void showMarker() {
+    @Override
+    public void showMarker() {
         map.clear();
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(new LatLng(location.getLatitude(),
                 location.getLongitude()));
@@ -381,8 +379,6 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
                 .title(getString(R.string.source_location))
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.pin)));
         progressBar.setIndeterminate(false);
-        mapRipple = new MapRipple(map, new LatLng(location.getLatitude(), location.getLongitude()), this);
-
     }
 
     final Handler handler = new Handler(){
@@ -399,20 +395,11 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
                 case 2:
                     Bundle responseBundle = msg.getData();
                     responseBundle.getString("response");
-                    address = null;
+                    tvManual.setAlpha(1);
+                    et_address.setText("");
                     break;
             }
         }
     };
 
-    private void addMarkerToMap() {
-        CameraUpdate riderCameraUpdate = CameraUpdateFactory.newLatLng(new LatLng(latLng.latitude, latLng.longitude));
-        map.moveCamera(riderCameraUpdate);
-
-        map.addMarker(new MarkerOptions().position(new LatLng(latLng.latitude, latLng.longitude)).title(getString(R.string.source_location))
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-
-        CameraUpdate zoom = CameraUpdateFactory.zoomTo(18);
-        map.animateCamera(zoom);
-    }
 }
