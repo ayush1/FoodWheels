@@ -26,11 +26,4 @@ public class LocationActivityModule {
     public Activity provideActivity(){
         return activity;
     }
-
-    @Provides
-    @PerActivity
-    public LocationPresenter provideLocationPresenter(){
-        return new LocationPresenter();
-    }
-
 }

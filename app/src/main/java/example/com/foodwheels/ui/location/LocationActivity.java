@@ -67,8 +67,7 @@ import example.com.foodwheels.utils.ViewUtils;
  */
 
 public class LocationActivity extends BaseActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, LocationListener,
-        ResultCallback<LocationSettingsResult>, BasePresenter.ProvideLocationViewPresenter {
+        GoogleApiClient.OnConnectionFailedListener, LocationListener, BasePresenter.ProvideLocationViewPresenter {
 
     @BindView(R.id.bottom_sheet)
     View bottomSheet;
@@ -105,7 +104,6 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
         }
     }
 
-
     private BottomSheetBehavior bottomSheetBehaviour;
     private boolean isAnimationRunning = false;
     private int EXPAND_VIEW_HEIGHT = 900;
@@ -127,8 +125,6 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
     GoogleApiClient.ConnectionCallbacks connectionCallbacks = this;
     GoogleApiClient.OnConnectionFailedListener connectionFailedListener = this;
 
-    protected static final String TAG = "LocationActivity";
-
     public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
     private int REQUEST_CHECK_SETTINGS = 1;
     private boolean requestingLocationUpdates;
@@ -148,6 +144,8 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
                 .build();
 
         activityComponent.inject(this);
+
+        locationPresenter.setView(this);
 
         bottomSheetBehaviour = BottomSheetBehavior.from(bottomSheet);
         bottomSheetBehaviour.setState(BottomSheetBehavior.STATE_EXPANDED);
@@ -212,7 +210,7 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
-                                checkLocationSettings(googleApiClient, locationSettingsRequest);
+                                locationPresenter.checkLocationSettings(googleApiClient, locationSettingsRequest);
                             }
                         })
                         .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -230,7 +228,7 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
                 location = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
                 updateLocationUI();
             }else{
-                checkLocationSettings(googleApiClient, locationSettingsRequest);
+                locationPresenter.checkLocationSettings(googleApiClient, locationSettingsRequest);
             }
         }
     }
@@ -245,40 +243,13 @@ public class LocationActivity extends BaseActivity implements OnMapReadyCallback
 
     }
 
-    public void checkLocationSettings(GoogleApiClient googleApiClient,
-                                      LocationSettingsRequest settingsRequest) {
-        PendingResult<LocationSettingsResult> result =
-                LocationServices.SettingsApi.checkLocationSettings(googleApiClient, settingsRequest);
-        result.setResultCallback(this);
-    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case 1:
-                checkLocationSettings(googleApiClient, locationSettingsRequest);
-        }
-    }
-
-    @Override
-    public void onResult(@NonNull LocationSettingsResult locationSettingsResult) {
-        final Status status = locationSettingsResult.getStatus();
-        switch (status.getStatusCode()) {
-            case LocationSettingsStatusCodes.SUCCESS:
-                showProgressBar();
-                startLocationUpdates();
-                break;
-            case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                try {
-                    status.startResolutionForResult(LocationActivity.this, REQUEST_CHECK_SETTINGS);
-                } catch (IntentSender.SendIntentException e) {
-                    Log.i(TAG, "Unable to execute request.");
-                }
-                break;
-            case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                Log.i(TAG, "Dialog not created.");
-                break;
+                locationPresenter.checkLocationSettings(googleApiClient, locationSettingsRequest);
         }
     }
 

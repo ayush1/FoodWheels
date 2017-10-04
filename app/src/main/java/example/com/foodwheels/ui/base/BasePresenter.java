@@ -24,6 +24,8 @@ public interface BasePresenter {
                                      GoogleApiClient.OnConnectionFailedListener connectionFailedListener);
         LocationRequest getLocationRequest(long locationUpdateInterval);
         LocationSettingsRequest getLocationSettingRequest(LocationRequest locationRequest);
+        void checkLocationSettings(GoogleApiClient googleApiClient,
+                                   LocationSettingsRequest settingsRequest);
     }
 
     interface ProvideLocationViewPresenter{
