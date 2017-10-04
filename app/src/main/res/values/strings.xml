@@ -10,4 +10,8 @@
     <string name="other">Other</string>
     <string name="save_and_proceed">SAVE and PROCEED</string>
     <string name="manual">MANUAL</string>
+    <string name="permission_denied_message">This permission is required to run the application, please provide it otherwise you may face difficulty in using the application.</string>
+    <string name="source_location">Your location</string>
+    <string name="identify_location">Identifying location...</string>
+
 </resources>
